@@ -1,7 +1,7 @@
 # Naturale
-This is a simple natural language classification application that basically takes a sentence or word and train the machine based on definition/meaning into a set of class that as that senstense belongs beased on Naive Bayes text classification http://nlp.stanford.edu/IR-book/html/htmledition/naive-bayes-text-classification-1.html.
+This is a simple natural language classification application that basically takes a sentence or word and train the machine based on definition/meaning into a set of class that as that senstense belongs beased on [Naive Bayes text classification](http://nlp.stanford.edu/IR-book/html/htmledition/naive-bayes-text-classification-1.html).
 
-This application has been deployed for test use on http://naturale.eu-west-1.elasticbeanstalk.com and can be offline anytime. 
+This application has been deployed for test use on [naturale](http://naturale.eu-west-1.elasticbeanstalk.com) and can be offline anytime. 
 
 ### Installation
 #### Docker
@@ -9,14 +9,14 @@ If you have docker installed, just run the following command to build and run th
 ```sh
 $ docker-compose up --build
 ```
-#### Npm
+#### Or Npm
 If you have npm already installed, just run the following command to build and install the application.
 ```sh
 $ npm run start
 ```
 
 ### Usage:
-To use the application, visit the site on http://localhost:80/ on any of your favorite web browser or rest client.
+To use the application, visit the site on [localhost:80](http://localhost:80) on any of your favorite web browser or rest client.
 
 ### Routes:
 ```yaml
