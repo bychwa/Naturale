@@ -65,6 +65,34 @@ const process_text = (text, callback) => {
         });
     }
 }
+var getMovies = (genre, callback)=>{
+    request('https://content.viaplay.se/pc-se/film/'+genre+'?block=1&partial=1&pageNumber=1&sort=most_popular', function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var contents = JSON.parse(body);
+            contents = contents._embedded['viaplay:products'] && contents._embedded['viaplay:products'].map((movie)=>{
+                let actors = (movie.content.people.actors && movie.content.people.actors.reduce((prev,curr)=>{
+                    prev = prev+''+curr;
+                    return prev;
+                },'')) || '';
+                return {'genre':genre.toString(), 'id': movie.system.guid.toString(),'title':movie.content.title.toString(),'actors': actors.toString(), 'year':movie.content.production.year.toString(),'synopsis':movie.content.synopsis.toString() };
+            });
+
+            return callback(contents);
+        }
+    });
+}
+const train_on_movies = (callback) => {
+    getMovies('action',(movies) => {
+         movies.forEach((movie,index) => {
+            for (_meta in movie){
+                word_classify(movie[_meta], movie.title);
+            }
+            if(index +1 >= movies.length){
+                return callback({'status':'success'});
+            }
+        });
+    });
+}
 
 app.get('/', function (req, res) {
     res.json({ 'status': 'ok' });
@@ -80,14 +108,15 @@ app.get('/query', function (req, res) {
             if (err) {
                 res.json({ 'status': 'Error on querying the classifier!' });
             } else {
-                const _value = classifier.classify(_text);
+                const _value = classifier.getClassifications(_text);
                 const _item = engine[_value] && engine[_value][Math.floor(Math.random() * engine[_value].length)];
                 res.json({ text: _text, classified_as: _value, response_text: _item, engine: { total: Object.keys(engine).length, values: engine } });
             }
         });
 
     } else {
-        const _value = classifier.classify(_text);
+        
+        const _value = classifier.classify(classifier.classify(_text));
         const _item = engine[_value] && engine[_value][Math.floor(Math.random() * engine[_value].length)];
         res.json({ text: _text, classified_as: _value, response_text: _item, engine: { total: Object.keys(engine).length, values: engine } });
     }
@@ -128,6 +157,34 @@ app.get('/get', function (req, res) {
     }
 
 });
+app.get('/movies', function (req, res) {
+    const keyword = req.query.text;
+    const fileName = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&explaintext&exintro&titles=' + keyword + '&redirects=true';
+    request({
+        method: 'GET',
+        uri: fileName,
+    }, function (error, response, body) {
+        if (error) {
+            res.json({ status: 'Error on training the classifier!' });
+        } else {
+            const bodyValues = JSON.parse(body);
+            const WikiPages = bodyValues.query.pages;
+            Object.keys(WikiPages).forEach((key,index) => {
+                WikiPages[key].extract.split('.').forEach((line) => {
+                    process_text(line,(err,done)=>{
+                        if(index + 1 >= WikiPages.length){
+                            
+                        }
+                    });
+                });
+            });
+
+            res.json({ status: 'Successfully scheduled classifier training!' });
+            
+        }
+
+    })
+});
 app.get('/train', function (req, res) {
     const keyword = req.query.text;
     const fileName = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&explaintext&exintro&titles=' + keyword + '&redirects=true';
@@ -162,30 +219,33 @@ app.get('/status', function (req, res) { res.json({ 'status': 'ok' }); });
 app.get('/application', function (req, res) { res.json({ 'status': 'ok' }); });
 app.get('/version', function (req, res) { res.json({ 'status': 'ok' }); });
 
-app.listen(80, function () {
+app.listen(8087, function () {
     console.log('Performing initial training!')
     // initial training
-    process_text('Tanzania is a great country.', (err, done) => {
-        process_text('I graduated from college this year.', (err, done) => {
-            process_text('A good friend is a great companion.', (err, done) => {
-                process_text('Is there life in Mars?', (err, done) => {
-                    process_text('Coffee keeps me awake.', (err, done) => {
-                        console.log('******* FINISHED ALL');
 
-                        const fileName = './datasets/classifier.json';
-                        natural.BayesClassifier.load(fileName, null, function (err, cls) {
-                            if (err) {
-                                console.log('******* ERROR ON UPDATING CLASSIFIER');
-                            } else {
-                                classifier = cls;
-                                console.log('******* JUST UPDATED CLASSIFIER');
-                            }
-                        });
-                    });
-                });
-            });
-        });
+    // process_text('Tanzania is a great country.', (err, done) => {
+    //     process_text('I graduated from college this year.', (err, done) => {
+    //         process_text('A good friend is a great companion.', (err, done) => {
+    //             process_text('Is there life in Mars?', (err, done) => {
+    //                 process_text('Coffee keeps me awake.', (err, done) => {
+    //                     console.log('******* FINISHED ALL');
+
+    //                     const fileName = './datasets/classifier.json';
+    //                     natural.BayesClassifier.load(fileName, null, function (err, cls) {
+    //                         if (err) {
+    //                             console.log('******* ERROR ON UPDATING CLASSIFIER');
+    //                         } else {
+    //                             classifier = cls;
+    //                             console.log('******* JUST UPDATED CLASSIFIER');
+    //                         }
+    //                     });
+    //                 });
+    //             });
+    //         });
+    //     });
+    // });
+    train_on_movies((done)=>{
+        console.log(done);
     });
-
 
 });
